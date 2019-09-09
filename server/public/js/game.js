@@ -102,8 +102,8 @@ function create()
   this.physics.world.setBounds(0, 0, 1600, 1200);
 
   // Add 2 groups for Bullet objects
-  playerBullets = this.physics.add.group({ classType: Buller, runChildUpdate: true});
-  enemyBullets = this.physics.add.group({ classType: Buller, runChildUpdate: true});
+  playerBullets = this.physics.add.group({ classType: Bullet, runChildUpdate: true});
+  enemyBullets = this.physics.add.group({ classType: Bullet, runChildUpdate: true});
 
   // Add background player, enemy, reticle, healthpoint sprites
   var background = this.add.image(800, 600, 'background');
@@ -206,6 +206,68 @@ function create()
 }
 //https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_combatMechanics.js
 
+function enemyHitCallback(enemyHit, bulletHit)
+
+{
+    // Reduce health of enemy
+    if (bulletHit.active === true && enemyHit.active === true)
+    {
+        enemyHit.health = enemyHit.health - 1;
+        console.log("Enemy hp: ", enemyHit.health);
+
+        // Kill enemy if health <= 0
+        if (enemyHit.health <= 0)
+        {
+           enemyHit.setActive(false).setVisible(false);
+        }
+
+        // Destroy bullet
+        bulletHit.setActive(false).setVisible(false);
+    }
+}
+
+function enemyFire(enemy, player, time, gameObject)
+{
+    if (enemy.active === false)
+    {
+        return;
+    }
+
+    if ((time - enemy.lastFired) > 1000)
+    {
+        enemy.lastFired = time;
+
+        // Get bullet from bullets group
+        var bullet = enemyBullets.get().setActive(true).setVisible(true);
+
+        if (bullet)
+        {
+            bullet.fire(enemy, player);
+
+            // Add collider between bullet and player
+            gameObject.physics.add.collider(player, bullet, playerHitCallback);
+        }
+    }
+}
+
+// Ensures reticle does not move offscreen
+function constrainReticle(reticle)
+{
+    var distX = reticle.x-player.x; // X distance between player & reticle
+    var distY = reticle.y-player.y; // Y distance between player & reticle
+
+    // Ensures reticle cannot be moved offscreen (player follow)
+    if (distX > 800)
+        reticle.x = player.x+800;
+    else if (distX < -800)
+        reticle.x = player.x-800;
+
+    if (distY > 600)
+        reticle.y = player.y+600;
+    else if (distY < -600)
+        reticle.y = player.y-600;
+}
+
 
   var self = this;
   this.socket = io();
@@ -268,7 +330,25 @@ function create()
   this.rightKeyPressed = false;
   this.upKeyPressed = false;
 
-function update() {
+function update(time, delta) 
+{
+  // Rotates player to face towards reticle
+  player.rotation = Phaser.Math.Angle.Between(player.x, player.y, reticle.x, reticle.y);
+  enemy.rotation = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+
+  //Make reticle move with player
+  reticle.body.velocity.x = player.body.velocity.x;
+  reticle.body.velocity.y = player.body.velocity.y;
+
+  // Constrain velocity of player
+  constrainVelocity(player, 500);
+
+  // Constrain position of constrainReticle
+  constrainReticle(reticle);
+
+  // Make enemy fire
+  enemyFire(enemy, player, time, this);  
+
   const left = this.leftKeyPressed;
   const right = this.rightKeyPressed;
   const up = this.upKeyPressed;
