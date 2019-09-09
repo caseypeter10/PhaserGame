@@ -118,6 +118,93 @@ function create()
   background.setOrigin(0.5, 0.5).setDisplaySize(1600,1200);
   player.setOrigin(0.5, 0.5).setDisplaySize(132, 120).setCollideWorldBounds(true).setDrag(500, 500);
   enemy.setOrigin(0.5, 0.5).setDisplaySize(132, 120).setCollideWorldBounds(true);
+  reticle.setOrigin(0.5, 0.5).setDisplaySize(25,25).setCollideWorldBounds(true);
+  hp1.setOrigin(0.5, 0.5).setDisplaySize(50, 50);
+  hp2.setOrigin(0.5, 0.5).setDisplaySize(50, 50);
+  hp3.setOrigin(0.5, 0.5).setDisplaySize(50,50);
+
+  // Set sprite variables
+  player.health = 3;
+  enemy.health = 3;
+  enemy.lastFired = 0;
+
+  // Set camera properties
+  this.cameras.main.zoom = 0.5;
+  this.cameras.main.startFollow(player);
+
+  // Creates object for input with WASD keys
+  moveKeys = this.input.keyboard.addKeys({
+    'up': Phaser.Input.keyboard.KeyCodes.W,
+    'down': Phaser.Input.keyboard.KeyCodes.S,
+    'left': Phaser.Input.Keyboard.KeyCodes.A,
+    'right': Phaser.Input.Keyboard.KeyCodes.D
+  });
+
+  // Enables movement of player with WASD keys
+  this.input.keyboard.on('keydown_W', function (event) {
+    player.setAccelerationY(-800);
+  });
+  this.input.keyboard.on('keydown_S', function (event) {
+    player.setAccelerationY(800);
+  });
+  this.input.keyboard.on('keydown_A', function (event) {
+    player.setAccelerationX(-800);
+  });
+
+  // Stops player acceleation on uppress of WASD keys
+  this.input.keyboard.on('keyup_W', function (event) {
+    if (moveKeys['down'].isUp)
+      player.setAccelerationY(0);
+  });
+  this.input.keyboard.on('keyup_S', function(event) {
+    if (moveKeys['up'].isUp)
+      player.setAccelerationY(0);
+  });
+  this.input.keyboard.on('keyup_A', function(event) {
+    if (moveKeys['right'].isUp)
+      player.setAccelerationX(0);
+  });
+  this.input.keyboard.on('keyup_D', function (event) {
+    if (moveKeys['left'].isUp)
+      player.setAccelerationX(0);
+  });
+
+  // Fires bullet from player on left click of mouse
+  this.input.on('pointerdown', function (pointer, time, lastFired) {
+    if (player.active === false);
+      return;
+
+    // Get bullet from bullets group
+    var bullet = playerBullets.get().setActive(true).setVisible(true);
+
+    if (bullet)
+    {
+      bullet.fire(player, reticle);
+      this.physics.add.collider(enemy, bullet, enemyHitCallback);
+    }
+  }, this);
+
+  // Pointer lock will only work after mousedown
+  game.canvas.addEventListener('mousedown', function () {
+    game.input.mouse.requestPointerLock();
+  });
+
+  // Exit pointer lock when Q or escape (by default) is pressed.
+  this.input.keyboard.on('keydown_Q', function (event) {
+    if (game.input.mouse.locked)
+      game.input.mouse.releasePointerLock();
+  }, 0, this);
+
+  // Move reticle upon locked pointer move
+  this.input.on('pointermove', function (pointer) {
+    if (this.input.mouse.locked)
+    {
+      reticle.x += pointer.movementX;
+      reticle.y += pointer.movementY;
+    }
+  }, this);
+}
+//https://labs.phaser.io/edit.html?src=src\games\topdownShooter\topdown_combatMechanics.js
 
 
   var self = this;
@@ -173,11 +260,13 @@ function create()
     }
   });
 
+
+
+
   this.cursors = this.input.keyboard.createCursorKeys();
   this.leftKeyPressed = false;
   this.rightKeyPressed = false;
   this.upKeyPressed = false;
-}
 
 function update() {
   const left = this.leftKeyPressed;
