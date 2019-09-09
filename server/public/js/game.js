@@ -3,22 +3,123 @@ var config = {
   parent: 'phaser-example',
   width: 800,
   height: 600,
+  physics: {
+    default: 'arcade',
+    arcade: {
+      gravity: { y:0 },
+      debug: false
+    }
+  },
   scene: {
     preload: preload,
     create: create,
-    update: update
+    update: update,
+    extend: {
+              player: null,
+              healthpoints: null,
+              reticle: null,
+              moveKeys: null,
+              playerBullets: null,
+              enemyBullets: null,
+              time: 0,
+            }
   }
 };
 
 var game = new Phaser.Game(config);
 
+var Bullet = new Phaset.Class({
+
+  Extends: Phaser.GameObjects.Image,
+
+  initialize:
+
+  // Bullet Constructor
+  function Bullet (scene)
+  {
+    Phaser.GameObjects.Image.call(this, scene, 0,0, 'bullet');
+    this.speed = 1;
+    this.born = 0;
+    this.direction = 0;
+    this.xSpeed = 0;
+    this.yspeed = 0;
+    this.setSize(12,12,true);
+  },
+
+  // Fires a buller from the player to the reticle
+  fire: function (shooter, target)
+  {
+    this.setPosition(shooter.x, shooter.y); // Initial position
+    this.direction = Math.atan( (target.x-this.x) / (target.y - this.y));
+
+    // Calculate x and y velocity of bullet to move it from shooter to target
+    if (target.y >= this.y)
+    {
+      this.xSpeed = this.speed*Math.sin(this.direction);
+      this.ySpeed = this.speed*Math.cos(this.direction);
+    }
+    else
+    {
+      this.xSpeed = -this.speed*Math.sin(this.direction);
+      this.ySpeed = -this.speed*Math.cos(this.direction);
+    }
+
+    this.rotation = shooter.rotation; // angle bullet with shooters rotation
+    this.born = 0; // Time since new buller spawned
+  },
+
+  // Updates the position of the buller each cycle
+  update: function (time, delta)
+  {
+    this.x += this.xSpeed * delta;
+    this.y += this.ySpeed * delta;
+    this.born += delta;
+    if (this.born > 1800)
+    {
+      this.setActive(false);
+      this.setVisible(false);
+    }
+  }
+
+
+});
+
 function preload() {
   this.load.image('ship', 'assets/spaceShips_001.png');
   this.load.image('otherPlayer', 'assets/enemyBlack5.png');
   this.load.image('star', 'assets/star_gold.png');
+  this.load.spritesheet('player_handgun', 'assets/player_handgun.png',
+    { frameWidth: 66, frameHeight: 60 }
+  );
+  this.load.image('bullet', 'assets/bullet6.png');
+  this.load.image('target', 'assets/ball.png');
+  this.load.image('background', 'assets/underwater1.png');
 }
 
-function create() {
+function create() 
+{
+  // Set world bounds
+  this.physics.world.setBounds(0, 0, 1600, 1200);
+
+  // Add 2 groups for Bullet objects
+  playerBullets = this.physics.add.group({ classType: Buller, runChildUpdate: true});
+  enemyBullets = this.physics.add.group({ classType: Buller, runChildUpdate: true});
+
+  // Add background player, enemy, reticle, healthpoint sprites
+  var background = this.add.image(800, 600, 'background');
+  player = this.physics.add.sprite(800, 600, 'player_handgun');
+  enemy = this.physics.add.sprite(300, 600, 'player_handgun');
+  reticle = this.physics.add.sprite(800,700, 'target');
+  hp1 = this.add.image(-350, -250, 'target').setScrollFactor(0.5, 0.5);
+  hp2 = this.add.image(-300, -250, 'target').setScrollFactor(0.5, 0.5);
+  hp3 = this.add.image(-250, -250, 'target').setScrollFactor(0.5, 0.5);
+
+  // Set image/sprite properties
+  background.setOrigin(0.5, 0.5).setDisplaySize(1600,1200);
+  player.setOrigin(0.5, 0.5).setDisplaySize(132, 120).setCollideWorldBounds(true).setDrag(500, 500);
+  enemy.setOrigin(0.5, 0.5).setDisplaySize(132, 120).setCollideWorldBounds(true);
+
+
   var self = this;
   this.socket = io();
   this.players = this.add.group();
