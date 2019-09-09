@@ -28,7 +28,7 @@ var config = {
 
 var game = new Phaser.Game(config);
 
-var Bullet = new Phaset.Class({
+var Bullet = new Phaser.Class({
 
   Extends: Phaser.GameObjects.Image,
 
@@ -46,7 +46,7 @@ var Bullet = new Phaset.Class({
     this.setSize(12,12,true);
   },
 
-  // Fires a buller from the player to the reticle
+  // Fires a bullet from the player to the reticle
   fire: function (shooter, target)
   {
     this.setPosition(shooter.x, shooter.y); // Initial position
